@@ -1,4 +1,5 @@
 import * as jsyaml from 'js-yaml'
+import * as core from '@actions/core'
 import picomatch from 'picomatch'
 import {File, ChangeStatus} from './file'
 
@@ -98,14 +99,20 @@ export class Filter {
   match(files: File[]): FilterResults {
     const result: FilterResults = {}
     for (const [key, patterns] of Object.entries(this.rules)) {
-      result[key] = files.filter(file => this.isMatch(file, patterns))
+      result[key] = files.filter(file => {
+        if(this.isMatch(file, patterns)) {
+          core.info(`${file.filename} matched ${patterns}`);
+        } else { core.info(`${file.filename} DID NOT match ${patterns}`); }
+        return this.isMatch(file, patterns);})
     }
     return result
   }
 
   private isMatch(file: File, patterns: FilterRuleItem[]): boolean {
     const aPredicate = (rule: Readonly<FilterRuleItem>): boolean => {
-      return (rule.status === undefined || rule.status.includes(file.status)) && rule.isMatch(file.filename)
+      const result = (rule.status === undefined || rule.status.includes(file.status)) && rule.isMatch(file.filename);
+      core.info(`${file.filename} in aPred(): ${result}; (${rule.status === undefined} || ???) && ${rule.isMatch(file.filename)}`);
+      return result;
     }
     if (this.filterConfig?.predicateQuantifier === 'every') {
       return patterns.every(aPredicate)

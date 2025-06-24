@@ -55,6 +55,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Filter = exports.isPredicateQuantifier = exports.SUPPORTED_PREDICATE_QUANTIFIERS = exports.PredicateQuantifier = void 0;
 const jsyaml = __importStar(__nccwpck_require__(1917));
+const core = __importStar(__nccwpck_require__(2186));
 const picomatch_1 = __importDefault(__nccwpck_require__(8569));
 // Minimatch options used in all matchers
 const MatchOptions = {
@@ -121,14 +122,24 @@ class Filter {
     match(files) {
         const result = {};
         for (const [key, patterns] of Object.entries(this.rules)) {
-            result[key] = files.filter(file => this.isMatch(file, patterns));
+            result[key] = files.filter(file => {
+                if (this.isMatch(file, patterns)) {
+                    core.info(`${file.filename} matched ${patterns}`);
+                }
+                else {
+                    core.info(`${file.filename} DID NOT match ${patterns}`);
+                }
+                return this.isMatch(file, patterns);
+            });
         }
         return result;
     }
     isMatch(file, patterns) {
         var _a;
         const aPredicate = (rule) => {
-            return (rule.status === undefined || rule.status.includes(file.status)) && rule.isMatch(file.filename);
+            const result = (rule.status === undefined || rule.status.includes(file.status)) && rule.isMatch(file.filename);
+            core.info(`${file.filename} in aPred(): ${result}; (${rule.status === undefined} || ???) && ${rule.isMatch(file.filename)}`);
+            return result;
         };
         if (((_a = this.filterConfig) === null || _a === void 0 ? void 0 : _a.predicateQuantifier) === 'every') {
             return patterns.every(aPredicate);
